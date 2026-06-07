@@ -25,6 +25,8 @@ const DEPARTMENTS = ['Engineering', 'Design', 'Product', 'Marketing', 'Sales', '
   )
 
 export default function Register() {
+  console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL) 
+  console.log('Anon Key:', import.meta.env.VITE_SUPABASE_ANON_KEY)
   const navigate = useNavigate()
   const [form, setForm] = useState({
     name: '', email: '', password: '', confirmPassword: '', role: '', department: ''

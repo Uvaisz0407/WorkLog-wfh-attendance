@@ -38,6 +38,7 @@ function StatCard({ label, value, sub, color = 'accent', icon }) {
 
 export default function Dashboard() {
   const { user } = useAuth()
+ 
   const attendance = useMemo(() => getUserAttendance(user?.id).sort((a, b) => b.date.localeCompare(a.date)), [user?.id])
 
   const thisMonth = useMemo(() => {

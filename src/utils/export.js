@@ -13,7 +13,7 @@ export const exportCSV = (records, filename = 'attendance') => {
     'Shift Duration': formatDurationShort(r.shiftSeconds),
     'Break Duration': formatDurationShort(r.breakSeconds),
     'Productive Hours': formatDurationShort(r.productiveSeconds),
-    'Overtime': formatDurationShort(r.overtimeSeconds),
+   
     'Status': r.status || '--',
     'Notes': r.notes || '',
   }))
@@ -59,9 +59,9 @@ export const exportPDF = (records, user, filename = 'attendance') => {
   doc.text(`Total Records: ${records.length}`, 210, 30)
 
   const totalProductive = records.reduce((s, r) => s + (r.productiveSeconds || 0), 0)
-  const totalOvertime = records.reduce((s, r) => s + (r.overtimeSeconds || 0), 0)
+  
   doc.text(`Total Productive: ${formatDurationShort(totalProductive)}`, 20, 38)
-  doc.text(`Total Overtime: ${formatDurationShort(totalOvertime)}`, 80, 38)
+  
 
   const statusCounts = records.reduce((acc, r) => {
     acc[r.status] = (acc[r.status] || 0) + 1
@@ -73,7 +73,7 @@ export const exportPDF = (records, user, filename = 'attendance') => {
   // Table
   autoTable(doc, {
     startY: 50,
-    head: [['Date', 'Employee', 'Sign In', 'Sign Out', 'Shift', 'Break', 'Productive', 'Overtime', 'Status', 'Notes']],
+    head: [['Date', 'Employee', 'Sign In', 'Sign Out', 'Shift', 'Break', 'Productive', 'Status', 'Notes']],
     body: records.map(r => [
       formatDate(r.date),
       r.userName || '--',
@@ -82,7 +82,7 @@ export const exportPDF = (records, user, filename = 'attendance') => {
       formatDurationShort(r.shiftSeconds),
       formatDurationShort(r.breakSeconds),
       formatDurationShort(r.productiveSeconds),
-      formatDurationShort(r.overtimeSeconds),
+      
       r.status || '--',
       r.notes || '',
     ]),
