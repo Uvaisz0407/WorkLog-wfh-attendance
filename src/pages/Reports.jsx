@@ -40,13 +40,13 @@ export default function Reports() {
   const stats = useMemo(() => {
     const totalProductive = filtered.reduce((s, r) => s + (r.productiveSeconds || 0), 0)
     const totalBreak = filtered.reduce((s, r) => s + (r.breakSeconds || 0), 0)
-    const totalOvertime = filtered.reduce((s, r) => s + (r.overtimeSeconds || 0), 0)
+    
     const totalShift = filtered.reduce((s, r) => s + (r.shiftSeconds || 0), 0)
     const byStatus = filtered.reduce((acc, r) => {
       acc[r.status] = (acc[r.status] || 0) + 1
       return acc
     }, {})
-    return { totalProductive, totalBreak, totalOvertime, totalShift, byStatus, count: filtered.length }
+  return { totalProductive, totalBreak, totalShift, byStatus, count: filtered.length }
   }, [filtered])
 
   const handleExportCSV = () => {
@@ -118,7 +118,7 @@ export default function Reports() {
           { label: 'Total Shift', value: formatDurationShort(stats.totalShift), color: 'text-white', bg: 'bg-dark-500' },
           { label: 'Productive', value: formatDurationShort(stats.totalProductive), color: 'text-accent-light', bg: 'bg-accent/10' },
           { label: 'Break Used', value: formatDurationShort(stats.totalBreak), color: 'text-warning', bg: 'bg-warning/10' },
-          { label: 'Overtime', value: formatDurationShort(stats.totalOvertime), color: 'text-purple', bg: 'bg-purple/10' },
+
         ].map(s => (
           <div key={s.label} className={`glass-card rounded-2xl p-4 ${s.bg} border border-white/5`}>
             <div className="text-xs text-slate-500 mb-2 font-medium">{s.label}</div>
@@ -162,7 +162,7 @@ export default function Reports() {
                   <th className="text-left px-4 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Sign Out</th>
                   <th className="text-left px-4 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Productive</th>
                   <th className="text-left px-4 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Break</th>
-                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Overtime</th>
+
                   <th className="text-left px-4 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
                   <th className="text-left px-4 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Notes</th>
                 </tr>
@@ -189,7 +189,7 @@ export default function Reports() {
                     </td>
                     <td className="px-4 py-3.5 text-sm text-accent-light font-mono whitespace-nowrap">{formatDurationShort(r.productiveSeconds)}</td>
                     <td className="px-4 py-3.5 text-sm text-warning font-mono whitespace-nowrap">{formatDurationShort(r.breakSeconds)}</td>
-                    <td className="px-4 py-3.5 text-sm text-purple font-mono whitespace-nowrap">{formatDurationShort(r.overtimeSeconds)}</td>
+                    
                     <td className="px-4 py-3.5 whitespace-nowrap"><StatusBadge status={r.status} /></td>
                     <td className="px-4 py-3.5 text-sm text-slate-500 max-w-[150px] truncate">{r.notes || '--'}</td>
                   </motion.tr>
