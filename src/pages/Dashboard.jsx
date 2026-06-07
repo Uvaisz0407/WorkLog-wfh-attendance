@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
-import { getUserAttendance } from '../utils/storage'
+import { getUserAttendance, getUsers, getAllAttendance } from '../utils/storage'
 import { formatDurationShort, formatDate, TODAY } from '../utils/time'
 import LiveTimer from '../components/dashboard/LiveTimer'
 import StatusBadge from '../components/shared/StatusBadge'
@@ -38,6 +38,19 @@ function StatCard({ label, value, sub, color = 'accent', icon }) {
 
 export default function Dashboard() {
   const { user } = useAuth()
+  const totalEmployees = getUsers().length
+
+const today = new Date().toISOString().split('T')[0]
+
+const presentToday = new Set(
+  getAllAttendance()
+    .filter(
+      r =>
+        r.date === today &&
+        ['Present', 'Completed', 'Late'].includes(r.status)
+    )
+    .map(r => r.userId)
+).size
  
   const attendance = useMemo(() => getUserAttendance(user?.id).sort((a, b) => b.date.localeCompare(a.date)), [user?.id])
 
@@ -51,10 +64,10 @@ export default function Dashboard() {
     const present = thisMonth.filter(r => ['Present', 'Completed', 'Late'].includes(r.status)).length
     const totalProductive = thisMonth.reduce((s, r) => s + (r.productiveSeconds || 0), 0)
     const totalBreak = thisMonth.reduce((s, r) => s + (r.breakSeconds || 0), 0)
-    const totalOvertime = thisMonth.reduce((s, r) => s + (r.overtimeSeconds || 0), 0)
+    
     const absent = thisMonth.filter(r => r.status === 'Absent').length
     const leave = thisMonth.filter(r => r.status === 'Leave').length
-    return { present, totalProductive, totalBreak, totalOvertime, absent, leave, total: thisMonth.length }
+    return { present, totalProductive, totalBreak, absent, leave, total: thisMonth.length }
   }, [thisMonth])
 
   const recent = attendance.slice(0, 5)
@@ -87,6 +100,41 @@ export default function Dashboard() {
       <motion.div {...fadeUp(0.1)}>
         <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">This Month</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {['Admin', 'Manager'].includes(user?.role) && (
+  <>
+    <StatCard
+      label="Total Employees"
+      value={totalEmployees}
+      color="accent"
+      icon={
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+          />
+        </svg>
+      }
+    />
+
+    <StatCard
+      label="Present Today"
+      value={presentToday}
+      color="success"
+      icon={
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+      }
+    />
+  </>
+)}
           <StatCard label="Days Present" value={stats.present} color="success"
             icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
           <StatCard label="Days Absent" value={stats.absent} color="danger"
@@ -97,8 +145,7 @@ export default function Dashboard() {
             icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>} />
           <StatCard label="Break Used" value={formatDurationShort(stats.totalBreak)} color="warning"
             icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
-          <StatCard label="Overtime" value={formatDurationShort(stats.totalOvertime)} color="purple"
-            icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
+          
         </div>
       </motion.div>
 
@@ -149,7 +196,7 @@ export default function Dashboard() {
                         {r.signOut ? new Date(r.signOut).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '--'}
                       </td>
                       <td className="px-5 py-3.5 text-sm text-accent-light font-mono">{formatDurationShort(r.productiveSeconds)}</td>
-                      <td className="px-5 py-3.5 text-sm text-purple font-mono">{formatDurationShort(r.overtimeSeconds)}</td>
+                     
                       <td className="px-5 py-3.5"><StatusBadge status={r.status} /></td>
                     </motion.tr>
                   ))}
