@@ -5,9 +5,11 @@ import { VitePWA } from 'vite-plugin-pwa'
 export default defineConfig({
   plugins: [
     react(),
+
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'vite.svg'],
+
+      includeAssets: ['favicon.svg', 'vite.png'],
 
       manifest: {
         name: 'WorkLog WFH',
@@ -19,17 +21,18 @@ export default defineConfig({
 
         display: 'standalone',
         start_url: '/',
+        scope: '/',
 
         icons: [
           {
-            src: '/vite.svg',
+            src: '/vite.png',
             sizes: '192x192',
-            type: 'image/svg+xml'
+            type: 'image/png'
           },
           {
-            src: '/vite.svg',
+            src: '/vite.png',
             sizes: '512x512',
-            type: 'image/svg+xml'
+            type: 'image/png'
           }
         ]
       }
@@ -39,6 +42,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+
     rollupOptions: {
       output: {
         manualChunks: {
