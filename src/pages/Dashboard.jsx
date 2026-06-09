@@ -52,27 +52,64 @@ const presentToday = new Set(
     .map(r => r.userId)
 ).size
  
-  const attendance = useMemo(() => getUserAttendance(user?.id).sort((a, b) => b.date.localeCompare(a.date)), [user?.id])
+  const attendance = useMemo(() => {
+    if (['Admin', 'Manager'].includes(user?.role)) {
+    return getAllAttendance().sort((a, b) => b.date.localeCompare(a.date))
+  }
 
+  return getUserAttendance(user?.id).sort((a, b) => b.date.localeCompare(a.date))
+}, [user])
   const thisMonth = useMemo(() => {
     const now = new Date()
     const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
     return attendance.filter(r => r.date.startsWith(ym))
   }, [attendance])
 
-  const stats = useMemo(() => {
-    const present = thisMonth.filter(r => ['Present', 'Completed', 'Late'].includes(r.status)).length
-    const totalProductive = thisMonth.reduce((s, r) => s + (r.productiveSeconds || 0), 0)
-    const totalBreak = thisMonth.reduce((s, r) => s + (r.breakSeconds || 0), 0)
-    
-    const absent = thisMonth.filter(r => r.status === 'Absent').length
-    const leave = thisMonth.filter(r => r.status === 'Leave').length
-    return { present, totalProductive, totalBreak, absent, leave, total: thisMonth.length }
-  }, [thisMonth])
+ const stats = useMemo(() => {
+  const present = thisMonth.filter(r => ['Present', 'Completed', 'Late'].includes(r.status)).length
+  const totalProductive = thisMonth.reduce((s, r) => s + (r.productiveSeconds || 0), 0)
+  const totalBreak = thisMonth.reduce((s, r) => s + (r.breakSeconds || 0), 0)
 
-  const recent = attendance.slice(0, 5)
+  const absent = thisMonth.filter(r => r.status === 'Absent').length
+  const leave = thisMonth.filter(r => r.status === 'Leave').length
 
-  return (
+  return {
+    present,
+    totalProductive,
+    totalBreak,
+    absent,
+    leave,
+    total: thisMonth.length
+  }
+}, [thisMonth])
+
+const todayStats = useMemo(() => {
+  if (!['Admin', 'Manager'].includes(user?.role)) return null
+
+  const users = getUsers().filter(
+    u => !['Admin', 'Manager', 'HR'].includes(u.role)
+  )
+
+  const todayRecords = getAllAttendance().filter(
+    r =>
+      r.date === TODAY &&
+      ['Present', 'Completed', 'Late'].includes(r.status)
+  )
+
+  const presentToday = todayRecords.length
+  const totalEmployees = users.length
+  const absentToday = totalEmployees - presentToday
+
+  return {
+    totalEmployees,
+    presentToday,
+    absentToday,
+  }
+}, [user])
+
+const recent = attendance.slice(0, 5)
+
+return (
     <div className="space-y-6">
       {/* Header */}
       <motion.div {...fadeUp(0)} className="flex items-start justify-between">
@@ -100,38 +137,26 @@ const presentToday = new Set(
       <motion.div {...fadeUp(0.1)}>
         <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">This Month</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {['Admin', 'Manager'].includes(user?.role) && (
+         
+
+{todayStats && (
   <>
     <StatCard
       label="Total Employees"
-      value={totalEmployees}
+      value={todayStats.totalEmployees}
       color="accent"
-      icon={
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
-          />
-        </svg>
-      }
     />
 
     <StatCard
       label="Present Today"
-      value={presentToday}
+      value={todayStats.presentToday}
       color="success"
-      icon={
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
-      }
+    />
+
+    <StatCard
+      label="Absent Today"
+      value={todayStats.absentToday}
+      color="danger"
     />
   </>
 )}
