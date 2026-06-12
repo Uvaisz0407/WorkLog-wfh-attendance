@@ -1,8 +1,9 @@
+import { supabase } from '../lib/supabase'
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
-import { getUserByEmail, addUser } from '../utils/storage'
+
 
 const ROLES = ['Employee', 'Manager', 'HR', 'Admin']
 const DEPARTMENTS = ['Engineering', 'Design', 'Product', 'Marketing', 'Sales', 'Operations', 'Finance', 'HR', 'Legal', 'Other']
@@ -25,12 +26,12 @@ const DEPARTMENTS = ['Engineering', 'Design', 'Product', 'Marketing', 'Sales', '
   )
 
 export default function Register() {
-  console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL) 
-  console.log('Anon Key:', import.meta.env.VITE_SUPABASE_ANON_KEY)
+  
   const navigate = useNavigate()
   const [form, setForm] = useState({
     name: '', email: '', password: '', confirmPassword: '', role: '', department: ''
   })
+  
   const [loading, setLoading] = useState(false)
   const [showPass, setShowPass] = useState(false)
   const [errors, setErrors] = useState({})
@@ -53,33 +54,55 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    const errs = validate()
-    if (Object.keys(errs).length > 0) { setErrors(errs); return }
 
-    const existing = getUserByEmail(form.email.trim())
-    if (existing) {
-      setErrors({ email: 'An account with this email already exists' })
+  const validationErrors = validate()
+
+  if (Object.keys(validationErrors).length > 0) {
+    setErrors(validationErrors)
+    return
+  }
+
+  setLoading(true)
+
+  try {
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', form.email.trim().toLowerCase())
+      .single()
+
+    if (existingUser) {
+      toast.error('Email already exists')
+      setLoading(false)
       return
     }
 
-    setLoading(true)
-    await new Promise(r => setTimeout(r, 600))
+    const { error } = await supabase
+      .from('users')
+      .insert([
+        {
+          name: form.name.trim(),
+          email: form.email.trim().toLowerCase(),
+          password: form.password,
+          role: form.role,
+          department: form.department
+        }
+      ])
 
-    const user = {
-      id: `user_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-      name: form.name.trim(),
-      email: form.email.trim().toLowerCase(),
-      password: form.password,
-      role: form.role,
-      department: form.department,
-      createdAt: new Date().toISOString(),
-      shiftConfig: { totalHours: 9, requiredHours: 8, breakAllowed: 1 }
-    }
+    if (error) throw error
 
-    addUser(user)
-    toast.success('Account created! Please sign in.')
+    toast.success('Account created successfully!')
     navigate('/login')
+
+  } catch (err) {
+    console.error(err)
+    toast.error(err.message)
   }
+
+  setLoading(false)
+}
+  
+  
 
  
 
@@ -193,6 +216,7 @@ export default function Register() {
               ) : 'Create Account'}
             </button>
           </form>
+          
         </div>
 
         <p className="text-center text-slate-500 text-sm mt-6">
