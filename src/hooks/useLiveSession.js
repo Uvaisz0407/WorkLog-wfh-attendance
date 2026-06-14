@@ -221,6 +221,8 @@ export function useLiveSession() {
       notes: '',
       is_manual: false
     }
+    await createAttendance(record)
+
 
    
 

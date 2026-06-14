@@ -32,9 +32,9 @@ export default function AttendanceModal({ open, onClose, onSave, record, userId,
       if (record) {
         setForm({
           date: record.date || '',
-          signIn: isoToTime(record.signIn),
-          signOut: isoToTime(record.signOut),
-          breakMinutes: record.breakSeconds ? String(Math.round(record.breakSeconds / 60)) : '0',
+          signIn: isoToTime(record.check_in),
+          signOut: isoToTime(record.check_out),
+          breakMinutes: record.break_seconds ? String(Math.round(record.break_seconds / 60)) : '0',
           status: record.status || 'Present',
           notes: record.notes || '',
         })
@@ -91,22 +91,26 @@ export default function AttendanceModal({ open, onClose, onSave, record, userId,
     const shiftConfig = { requiredHours: 8 }
     const overtimeSec = getOvertimeSeconds(productiveSec, shiftConfig)
 
-    onSave({
-      userId,
-      userName,
-      department,
-      role,
-      date: form.date,
-      signIn: signInISO,
-      signOut: signOutISO,
-      breakSeconds: breakSec,
-      shiftSeconds: shiftSec,
-      productiveSeconds: productiveSec,
-      overtimeSeconds: overtimeSec,
-      status: form.status,
-      notes: form.notes,
-      isManual: true,
-    })
+  onSave({
+  user_id: userId,
+  user_name: userName,
+  department,
+  role,
+
+  date: form.date,
+
+  check_in: signInISO,
+  check_out: signOutISO,
+
+  break_seconds: breakSec,
+  shift_seconds: shiftSec,
+  productive_seconds: productiveSec,
+
+  status: form.status,
+  notes: form.notes,
+
+  is_manual: true,
+})
   }
 
   return (

@@ -81,26 +81,63 @@ useEffect(() => {
     else { setSortField(field); setSortDir('asc') }
   }
 
-  const handleSave = useCallback((data) => {
-    const existing = getAttendanceByDate(user.id, data.date)
-    if (existing && !modal.record) {
-      toast.error('Attendance for this date already exists. Use Edit instead.')
-      return
+  const handleSave = useCallback(async (data) => {
+  try {
+
+    if (modal.record) {
+
+      await updateAttendance(
+        modal.record.id,
+        data
+      )
+
+      toast.success('Attendance updated!')
+
+    } else {
+
+      await createAttendance(data)
+
+      toast.success('Attendance added!')
     }
-    upsertAttendance(data)
-    toast.success(modal.record ? 'Attendance updated!' : 'Attendance added!')
-    setModal({ open: false, record: null })
-    refresh()
-  }, [user, modal.record])
 
-  const handleDelete = () => {
-    if (!deleteModal.record) return
-    deleteAttendance(user.id, deleteModal.record.date)
-    toast.success('Record deleted')
-    setDeleteModal({ open: false, record: null })
-    refresh()
+    setModal({
+      open: false,
+      record: null
+    })
+
+    loadAttendance()
+
+  } catch (error) {
+
+    console.error(error)
+
+    toast.error(
+      error.message ||
+      'Failed to save attendance'
+    )
   }
+}, [modal.record])
 
+  const handleDelete = async () => {
+  if (!deleteModal.record) return
+
+  try {
+    await deleteAttendance(deleteModal.record.id)
+
+    await loadAttendance()
+
+    toast.success('Record deleted')
+
+    setDeleteModal({
+      open: false,
+      record: null
+    })
+
+  } catch (error) {
+    console.error(error)
+    toast.error('Failed to delete record')
+  }
+}
   const SortIcon = ({ field }) => (
     <span className={`ml-1 ${sortField === field ? 'text-accent-light' : 'text-slate-600'}`}>
       {sortField === field ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
