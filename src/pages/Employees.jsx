@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
-import { getUsers, updateUser, deleteUser } from '../utils/storage'
+import { getUsers, updateUser, deleteUser } from '../services/userService'
 import ConfirmModal from '../components/shared/ConfirmModal'
 import toast from 'react-hot-toast'
 
@@ -17,7 +17,7 @@ const roleColor = {
 
 export default function Employees() {
   const { user } = useAuth()
-  const [users, setUsers] = useState(() => getUsers())
+  const [users, setUsers] = useState([])
   const [search, setSearch] = useState('')
   const [editModal, setEditModal] = useState({ open: false, employee: null })
   const [deleteModal, setDeleteModal] = useState({ open: false, employee: null })
@@ -26,7 +26,19 @@ export default function Employees() {
 
   const isAdmin = ['Admin', 'Manager', 'HR'].includes(user?.role)
 
-  const refresh = () => setUsers(getUsers())
+  
+  const refresh = async () => {
+  try {
+    const data = await getUsers()
+    setUsers(data || [])
+  } catch (error) {
+    console.error(error)
+    toast.error('Failed to load employees')
+  }
+}
+useEffect(() => {
+  refresh()
+}, [])
 
   const filtered = useMemo(() => {
     if (!search) return users
@@ -67,19 +79,22 @@ export default function Employees() {
     refresh()
   }
 
-  const handleDelete = () => {
-    if (!deleteModal.employee) return
-    if (deleteModal.employee.id === user.id) {
-      toast.error("You can't delete your own account")
-      setDeleteModal({ open: false, employee: null })
-      return
-    }
-    deleteUser(deleteModal.employee.id)
-    toast.success('Employee removed')
+  const handleDelete = async () => {
+  if (!deleteModal.employee) return
+
+  if (deleteModal.employee.id === user.id) {
+    toast.error("You can't delete your own account")
     setDeleteModal({ open: false, employee: null })
-    refresh()
+    return
   }
 
+  await deleteUser(deleteModal.employee.id)
+
+  await refresh()
+
+  toast.success('Employee removed')
+  setDeleteModal({ open: false, employee: null })
+}
   return (
     <div className="space-y-6">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex items-start justify-between gap-4 flex-wrap">

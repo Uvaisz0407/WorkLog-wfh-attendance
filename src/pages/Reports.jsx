@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
-import { getUserAttendance, getAllAttendance, getUsers } from '../utils/storage'
+import { getUserAttendance, getAllAttendance } from '../services/attendanceService'
 import { formatDate, formatDurationShort } from '../utils/time'
 import { exportCSV, exportPDF } from '../utils/export'
 import StatusBadge from '../components/shared/StatusBadge'
@@ -17,31 +17,80 @@ export default function Reports() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   })
   const [statusFilter, setStatusFilter] = useState('All')
+  const [employeeFilter, setEmployeeFilter] = useState('all')
+const [rawRecords, setRawRecords] = useState([])
+const [loading, setLoading] = useState(true)
+  
 
-  const allUsers = useMemo(() => getUsers(), [])
+  useEffect(() => {
+  async function loadReports() {
+    try {
+      setLoading(true)
 
-  const rawRecords = useMemo(() => {
-    if (scope === 'all' && isAdmin) return getAllAttendance()
-    return getUserAttendance(user?.id)
-  }, [scope, isAdmin, user?.id])
+      let data = []
 
+      if (scope === 'all' && isAdmin) {
+        data = await getAllAttendance()
+      } else {
+        data = await getUserAttendance(user?.id)
+      }
+      
+
+      setRawRecords(data || [])
+    } catch (error) {
+      console.error(error)
+      toast.error('Failed to load reports')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (user?.id) {
+    loadReports()
+  }
+}, [user?.id, scope, isAdmin])
+const employees = useMemo(() => {
+  const names = [...new Set(rawRecords.map(r => r.user_name).filter(Boolean))]
+  return names.sort()
+}, [rawRecords])
   const months = useMemo(() => {
     const set = new Set(rawRecords.map(r => r.date.slice(0, 7)))
     return Array.from(set).sort((a, b) => b.localeCompare(a))
   }, [rawRecords])
 
   const filtered = useMemo(() => {
-    let data = [...rawRecords]
-    if (monthFilter) data = data.filter(r => r.date.startsWith(monthFilter))
-    if (statusFilter !== 'All') data = data.filter(r => r.status === statusFilter)
-    return data.sort((a, b) => b.date.localeCompare(a.date))
-  }, [rawRecords, monthFilter, statusFilter])
+    
+  let data = [...rawRecords]
+
+  if (monthFilter)
+    data = data.filter(r => r.date.startsWith(monthFilter))
+
+  if (statusFilter !== 'All')
+    data = data.filter(r => r.status === statusFilter)
+
+  if (employeeFilter !== 'all')
+    data = data.filter(r => r.user_name === employeeFilter)
+
+  return data.sort((a, b) => b.date.localeCompare(a.date))
+}, [rawRecords, monthFilter, statusFilter, employeeFilter])
+ 
+
 
   const stats = useMemo(() => {
-    const totalProductive = filtered.reduce((s, r) => s + (r.productiveSeconds || 0), 0)
-    const totalBreak = filtered.reduce((s, r) => s + (r.breakSeconds || 0), 0)
-    
-    const totalShift = filtered.reduce((s, r) => s + (r.shiftSeconds || 0), 0)
+ const totalProductive = filtered.reduce(
+  (s, r) => s + (r.productive_seconds || 0),
+  0
+)
+
+const totalBreak = filtered.reduce(
+  (s, r) => s + (r.break_seconds || 0),
+  0
+)
+
+const totalShift = filtered.reduce(
+  (s, r) => s + (r.shift_seconds || 0),
+  0
+)
     const byStatus = filtered.reduce((acc, r) => {
       acc[r.status] = (acc[r.status] || 0) + 1
       return acc
@@ -50,15 +99,39 @@ export default function Reports() {
   }, [filtered])
 
   const handleExportCSV = () => {
-    if (filtered.length === 0) { toast.error('No records to export'); return }
-    exportCSV(filtered, `attendance_${scope}_${monthFilter || 'all'}`)
-    toast.success('CSV exported!')
+     if (filtered.length === 0) {
+    toast.error('No records to export')
+    return
+  }
+
+  const fileName =
+    employeeFilter !== 'all'
+      ? `${employeeFilter}_Report_${monthFilter || 'all'}`
+      : `attendance_${scope}_${monthFilter || 'all'}`
+
+  exportCSV(filtered, fileName)
+
+  toast.success('CSV exported!')
   }
 
   const handleExportPDF = () => {
-    if (filtered.length === 0) { toast.error('No records to export'); return }
-    exportPDF(filtered, scope === 'mine' ? user : null, `attendance_${scope}_${monthFilter || 'all'}`)
-    toast.success('PDF exported!')
+    if (filtered.length === 0) {
+    toast.error('No records to export')
+    return
+  }
+
+  const fileName =
+    employeeFilter !== 'all'
+      ? `${employeeFilter}_Report_${monthFilter || 'all'}`
+      : `attendance_${scope}_${monthFilter || 'all'}`
+
+  exportPDF(
+    filtered,
+    scope === 'mine' ? user : null,
+    fileName
+  )
+
+  toast.success('PDF exported!')
   }
 
   const STATUSES = ['All', 'Present', 'Absent', 'Half Day', 'Leave', 'Late', 'Completed']
@@ -105,6 +178,21 @@ export default function Reports() {
           <option value="">All months</option>
           {months.map(m => <option key={m} value={m}>{new Date(m + '-01').toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</option>)}
         </select>
+       
+  <select
+    value={employeeFilter}
+    onChange={e => setEmployeeFilter(e.target.value)}
+    className="input-field w-auto py-2"
+  >
+    <option value="all">All Employees</option>
+
+    {employees.map(emp => (
+      <option key={emp} value={emp}>
+        {emp}
+      </option>
+    ))}
+  </select>
+
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="input-field w-auto py-2">
           {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
@@ -177,18 +265,18 @@ export default function Reports() {
                     <td className="px-4 py-3.5 text-sm text-white font-medium whitespace-nowrap">{formatDate(r.date)}</td>
                     {scope === 'all' && (
                       <td className="px-4 py-3.5 text-sm text-slate-300 whitespace-nowrap">
-                        <div>{r.userName || '--'}</div>
+                        <div>{r.user_name || '--'}</div>
                         <div className="text-xs text-slate-600">{r.department}</div>
                       </td>
                     )}
                     <td className="px-4 py-3.5 text-sm text-slate-400 font-mono whitespace-nowrap">
-                      {r.signIn ? new Date(r.signIn).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '--'}
+                      {r.check_in ? new Date(r.check_in).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '--'}
                     </td>
                     <td className="px-4 py-3.5 text-sm text-slate-400 font-mono whitespace-nowrap">
-                      {r.signOut ? new Date(r.signOut).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '--'}
+                      {r.check_out ? new Date(r.check_out).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '--'}
                     </td>
-                    <td className="px-4 py-3.5 text-sm text-accent-light font-mono whitespace-nowrap">{formatDurationShort(r.productiveSeconds)}</td>
-                    <td className="px-4 py-3.5 text-sm text-warning font-mono whitespace-nowrap">{formatDurationShort(r.breakSeconds)}</td>
+                    <td className="px-4 py-3.5 text-sm text-accent-light font-mono whitespace-nowrap">{formatDurationShort(r.productive_seconds)}</td>
+                    <td className="px-4 py-3.5 text-sm text-warning font-mono whitespace-nowrap">{formatDurationShort(r.break_seconds)}</td>
                     
                     <td className="px-4 py-3.5 whitespace-nowrap"><StatusBadge status={r.status} /></td>
                     <td className="px-4 py-3.5 text-sm text-slate-500 max-w-[150px] truncate">{r.notes || '--'}</td>

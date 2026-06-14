@@ -9,11 +9,17 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const session = getSession()
-    if (session) setUser(session)
+
+    if (session) {
+      setUser(session)
+    }
+
     setLoading(false)
   }, [])
 
   const login = (userData) => {
+    console.log('LOGIN USER DATA:', userData)
+
     setSession(userData)
     setUser(userData)
   }
@@ -29,7 +35,15 @@ export const AuthProvider = ({ children }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, refreshUser, loading }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        login,
+        logout,
+        refreshUser,
+        loading,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )
@@ -37,6 +51,10 @@ export const AuthProvider = ({ children }) => {
 
 export const useAuth = () => {
   const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be inside AuthProvider')
+
+  if (!ctx) {
+    throw new Error('useAuth must be inside AuthProvider')
+  }
+
   return ctx
 }

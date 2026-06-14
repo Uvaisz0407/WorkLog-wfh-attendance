@@ -4,6 +4,7 @@ import { secondsToHHMM, formatDurationShort } from '../../utils/time'
 import { useLiveSession } from '../../hooks/useLiveSession'
 import toast from 'react-hot-toast'
 
+
 export default function LiveTimer() {
   const {
     session,
@@ -11,7 +12,6 @@ export default function LiveTimer() {
     totalBreakSeconds,
     productiveSeconds,
     remainingSeconds,
-    overtimeSeconds,
     isComplete,
     shiftConfig,
     existingToday,
@@ -69,7 +69,7 @@ export default function LiveTimer() {
             <p className="text-slate-500 text-sm">Status: <span className="text-success">{existingToday.status}</span></p>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <div className="bg-dark-600 rounded-xl p-3 text-center">
             <div className="text-xs text-slate-500 mb-1">Productive</div>
             <div className="text-white font-semibold text-sm">{formatDurationShort(existingToday.productiveSeconds)}</div>
@@ -78,10 +78,7 @@ export default function LiveTimer() {
             <div className="text-xs text-slate-500 mb-1">Break</div>
             <div className="text-white font-semibold text-sm">{formatDurationShort(existingToday.breakSeconds)}</div>
           </div>
-          <div className="bg-dark-600 rounded-xl p-3 text-center">
-            <div className="text-xs text-slate-500 mb-1">Overtime</div>
-            <div className="text-warning font-semibold text-sm">{formatDurationShort(existingToday.overtimeSeconds)}</div>
-          </div>
+          
         </div>
       </motion.div>
     )
@@ -168,7 +165,7 @@ export default function LiveTimer() {
             { label: 'Total Elapsed', value: secondsToHHMM(elapsed), color: 'text-white' },
             { label: 'Break Used', value: formatDurationShort(totalBreakSeconds), color: 'text-warning' },
             { label: 'Remaining', value: formatDurationShort(remainingSeconds), color: 'text-accent-light' },
-            { label: 'Overtime', value: formatDurationShort(overtimeSeconds), color: 'text-purple' },
+        
           ].map(s => (
             <div key={s.label} className="bg-dark-600 rounded-xl p-3 text-center">
               <div className="text-xs text-slate-500 mb-1">{s.label}</div>

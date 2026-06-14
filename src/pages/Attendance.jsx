@@ -1,7 +1,14 @@
-import React, { useState, useMemo, useCallback } from 'react'
+import React, { useState, useMemo, useCallback, useEffect} from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
-import { getUserAttendance, upsertAttendance, deleteAttendance, getAttendanceByDate, getAllAttendance } from '../utils/storage'
+import {
+  getUserAttendance,
+  getAttendanceByDate,
+  getAllAttendance,
+  createAttendance,
+  updateAttendance,
+  deleteAttendance
+} from '../services/attendanceService'
 import { formatDate, formatDurationShort, TODAY } from '../utils/time'
 import StatusBadge from '../components/shared/StatusBadge'
 import AttendanceModal from '../components/attendance/AttendanceModal'
@@ -12,7 +19,7 @@ const STATUSES = ['All', 'Present', 'Absent', 'Half Day', 'Leave', 'Late', 'Comp
 
 export default function Attendance() {
   const { user } = useAuth()
-  const [records, setRecords] = useState(() => getUserAttendance(user?.id).sort((a, b) => b.date.localeCompare(a.date)))
+  const [records, setRecords] = useState([])
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
   const [monthFilter, setMonthFilter] = useState('')
@@ -21,7 +28,33 @@ export default function Attendance() {
   const [sortField, setSortField] = useState('date')
   const [sortDir, setSortDir] = useState('desc')
 
-  const refresh = () => setRecords(getUserAttendance(user?.id).sort((a, b) => b.date.localeCompare(a.date)))
+ const loadAttendance = async () => {
+   try {
+    let data = []
+
+    if (['Admin', 'Manager', 'HR'].includes(user?.role)) {
+      const { getAllAttendance } = await import('../services/attendanceService')
+      data = await getAllAttendance()
+    } else {
+      data = await getUserAttendance(user.id)
+    }
+
+    setRecords(
+      (data || []).sort((a, b) =>
+        b.date.localeCompare(a.date)
+      )
+    )
+  } catch (error) {
+    console.error(error)
+    toast.error('Failed to load attendance')
+  }
+}
+
+useEffect(() => {
+  if (user?.id) {
+    loadAttendance()
+  }
+}, [user])
 
   const isAdmin = user?.role === 'Admin' || user?.role === 'Manager' || user?.role === 'HR'
 
@@ -84,8 +117,12 @@ export default function Attendance() {
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-display font-bold text-white">Attendance</h1>
-          <p className="text-slate-500 text-sm mt-1">{records.length} total records · {user?.name}</p>
+         <p className="text-slate-500 text-sm mt-1">
+  {records.length} total records
+  {isAdmin ? ' · All Employees' : ` · ${user?.name}`}
+</p>
         </div>
+        
         <button onClick={() => setModal({ open: true, record: null })} className="btn-primary">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -139,14 +176,19 @@ export default function Attendance() {
               <thead>
                 <tr className="border-b border-white/5">
                   {[
-                    { label: 'Date', field: 'date' },
-                    { label: 'Sign In', field: 'signIn' },
-                    { label: 'Sign Out', field: 'signOut' },
-                    { label: 'Shift', field: 'shiftSeconds' },
-                    { label: 'Break', field: 'breakSeconds' },
-                    { label: 'Productive', field: 'productiveSeconds' },
-                    { label: 'Overtime', field: 'overtimeSeconds' },
-                    { label: 'Status', field: 'status' },
+                    
+  ...(isAdmin
+    ? [{ label: 'Employee', field: 'user_name' }]
+    : []),
+
+  { label: 'Date', field: 'date' },
+  { label: 'Check In', field: 'check_in' },
+  { label: 'Check Out', field: 'check_out' },
+  { label: 'Shift', field: 'shift_seconds' },
+  { label: 'Break', field: 'break_seconds' },
+  { label: 'Productive', field: 'productive_seconds' },
+  { label: 'Status', field: 'status' },
+
                   ].map(col => (
                     <th key={col.field}
                       className="text-left px-4 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-slate-300 transition-colors select-none whitespace-nowrap"
@@ -164,17 +206,28 @@ export default function Attendance() {
                     animate={{ opacity: 1 }}
                     transition={{ delay: Math.min(i * 0.03, 0.3) }}
                     className="table-row">
+                      {isAdmin && (
+  <td className="px-4 py-3.5 text-sm text-white whitespace-nowrap">
+    {r.user_name}
+  </td>
+)}
                     <td className="px-4 py-3.5 text-sm text-white font-medium whitespace-nowrap">{formatDate(r.date)}</td>
                     <td className="px-4 py-3.5 text-sm text-slate-400 font-mono whitespace-nowrap">
-                      {r.signIn ? new Date(r.signIn).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '--'}
+                      {r.check_in ? new Date(r.check_in).toLocaleTimeString('en-IN', {
+  hour: '2-digit',
+  minute: '2-digit'
+}) : '--'}
                     </td>
                     <td className="px-4 py-3.5 text-sm text-slate-400 font-mono whitespace-nowrap">
-                      {r.signOut ? new Date(r.signOut).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '--'}
+                     {r.check_out ? new Date(r.check_out).toLocaleTimeString('en-IN', {
+  hour: '2-digit',
+  minute: '2-digit'
+}) : '--'}
                     </td>
-                    <td className="px-4 py-3.5 text-sm text-slate-300 font-mono whitespace-nowrap">{formatDurationShort(r.shiftSeconds)}</td>
-                    <td className="px-4 py-3.5 text-sm text-warning font-mono whitespace-nowrap">{formatDurationShort(r.breakSeconds)}</td>
-                    <td className="px-4 py-3.5 text-sm text-accent-light font-mono whitespace-nowrap">{formatDurationShort(r.productiveSeconds)}</td>
-                    <td className="px-4 py-3.5 text-sm text-purple font-mono whitespace-nowrap">{formatDurationShort(r.overtimeSeconds)}</td>
+                    <td className="px-4 py-3.5 text-sm text-slate-300 font-mono whitespace-nowrap">{formatDurationShort(r.shift_seconds)}</td>
+                    <td className="px-4 py-3.5 text-sm text-warning font-mono whitespace-nowrap">{formatDurationShort(r.break_seconds)}</td>
+                    <td className="px-4 py-3.5 text-sm text-accent-light font-mono whitespace-nowrap">{formatDurationShort(r.productive_seconds)}</td>
+
                     <td className="px-4 py-3.5 whitespace-nowrap"><StatusBadge status={r.status} /></td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-2 justify-end">

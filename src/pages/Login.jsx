@@ -31,7 +31,7 @@ export default function Login() {
   if (!form.email.trim() || !form.password) {
     toast.error('Please fill in all fields')
     return
-
+  }
     if (!form.email.trim() || !form.password) {
       toast.error('Please fill in all fields')
       return

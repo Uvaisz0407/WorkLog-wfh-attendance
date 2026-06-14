@@ -4,15 +4,16 @@ import autoTable from 'jspdf-autotable'
 import { formatDate, formatDurationShort, formatTime } from './time'
 
 export const exportCSV = (records, filename = 'attendance') => {
+  console.log("CSV RECORD:", records[0])
   const rows = records.map(r => ({
     'Date': formatDate(r.date),
-    'Employee': r.userName || '--',
+    'Employee': r.user_name || '--',
     'Department': r.department || '--',
-    'Sign In': formatTime(r.signIn),
-    'Sign Out': formatTime(r.signOut),
-    'Shift Duration': formatDurationShort(r.shiftSeconds),
-    'Break Duration': formatDurationShort(r.breakSeconds),
-    'Productive Hours': formatDurationShort(r.productiveSeconds),
+    'Sign In': formatTime(r.check_in),
+    'Sign Out': formatTime(r.check_out),
+    'Shift Duration': formatDurationShort(r.shift_seconds),
+    'Break Duration': formatDurationShort(r.break_seconds),
+    'Productive Hours': formatDurationShort(r.productive_seconds),
    
     'Status': r.status || '--',
     'Notes': r.notes || '',
@@ -58,7 +59,7 @@ export const exportPDF = (records, user, filename = 'attendance') => {
   doc.text(`Role: ${user?.role || '--'}`, 150, 30)
   doc.text(`Total Records: ${records.length}`, 210, 30)
 
-  const totalProductive = records.reduce((s, r) => s + (r.productiveSeconds || 0), 0)
+  const totalProductive = records.reduce((s, r) => s + (r.productive_seconds || 0), 0)
   
   doc.text(`Total Productive: ${formatDurationShort(totalProductive)}`, 20, 38)
   
@@ -76,12 +77,12 @@ export const exportPDF = (records, user, filename = 'attendance') => {
     head: [['Date', 'Employee', 'Sign In', 'Sign Out', 'Shift', 'Break', 'Productive', 'Status', 'Notes']],
     body: records.map(r => [
       formatDate(r.date),
-      r.userName || '--',
-      formatTime(r.signIn),
-      formatTime(r.signOut),
-      formatDurationShort(r.shiftSeconds),
-      formatDurationShort(r.breakSeconds),
-      formatDurationShort(r.productiveSeconds),
+      r.user_name || '--',
+      formatTime(r.check_in),
+      formatTime(r.check_out),
+      formatDurationShort(r.shift_seconds),
+      formatDurationShort(r.break_seconds),
+      formatDurationShort(r.productive_seconds),
       
       r.status || '--',
       r.notes || '',

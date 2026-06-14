@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
-import { getUserAttendance, getUsers, getAllAttendance } from '../utils/storage'
+import { getUserAttendance, getAllAttendance } from '../services/attendanceService'
+import { getUsers } from '../services/userService'
 import { formatDurationShort, formatDate, TODAY } from '../utils/time'
 import LiveTimer from '../components/dashboard/LiveTimer'
 import StatusBadge from '../components/shared/StatusBadge'
@@ -37,28 +38,49 @@ function StatCard({ label, value, sub, color = 'accent', icon }) {
 }
 
 export default function Dashboard() {
-  const { user } = useAuth()
-  const totalEmployees = getUsers().length
+const { user } = useAuth()
+
+const [attendance, setAttendance] = useState([])
+const [users, setUsers] = useState([])
+const [loading, setLoading] = useState(true)
 
 const today = new Date().toISOString().split('T')[0]
+useEffect(() => {
+  async function loadData() {
+    try {
+      setLoading(true)
 
+      const usersData = await getUsers()
+      setUsers(usersData)
+
+      if (['Admin', 'Manager', 'HR'].includes(user?.role)) {
+        const attendanceData = await getAllAttendance()
+        setAttendance(attendanceData || [])
+      } else {
+        const attendanceData = await getUserAttendance(user?.id)
+        setAttendance(attendanceData || [])
+      }
+    } catch (error) {
+      console.error('Dashboard Load Error:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (user) {
+    loadData()
+  }
+}, [user])
 const presentToday = new Set(
-  getAllAttendance()
+  attendance
     .filter(
       r =>
         r.date === today &&
-        ['Present', 'Completed', 'Late'].includes(r.status)
+        r.check_in
     )
-    .map(r => r.userId)
+    .map(r => r.user_id)
 ).size
  
-  const attendance = useMemo(() => {
-    if (['Admin', 'Manager'].includes(user?.role)) {
-    return getAllAttendance().sort((a, b) => b.date.localeCompare(a.date))
-  }
-
-  return getUserAttendance(user?.id).sort((a, b) => b.date.localeCompare(a.date))
-}, [user])
   const thisMonth = useMemo(() => {
     const now = new Date()
     const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
@@ -66,9 +88,11 @@ const presentToday = new Set(
   }, [attendance])
 
  const stats = useMemo(() => {
-  const present = thisMonth.filter(r => ['Present', 'Completed', 'Late'].includes(r.status)).length
-  const totalProductive = thisMonth.reduce((s, r) => s + (r.productiveSeconds || 0), 0)
-  const totalBreak = thisMonth.reduce((s, r) => s + (r.breakSeconds || 0), 0)
+  const present = thisMonth.filter(
+  r => r.check_in
+).length
+  const totalProductive = thisMonth.reduce((s, r) => s + (r.productive_seconds || 0), 0)
+  const totalBreak = thisMonth.reduce((s, r) => s + (r.break_seconds || 0), 0)
 
   const absent = thisMonth.filter(r => r.status === 'Absent').length
   const leave = thisMonth.filter(r => r.status === 'Leave').length
@@ -84,18 +108,17 @@ const presentToday = new Set(
 }, [thisMonth])
 
 const todayStats = useMemo(() => {
-  if (!['Admin', 'Manager'].includes(user?.role)) return null
+  if (!['Admin', 'Manager', 'HR'].includes(user?.role)) return null
 
-  const users = getUsers().filter(
-    u => !['Admin', 'Manager', 'HR'].includes(u.role)
-  )
+const activeUsers = users.filter(
+  u => !['Admin', 'Manager', 'HR'].includes(u.role)
+)
 
-  const todayRecords = getAllAttendance().filter(
-    r =>
-      r.date === TODAY &&
-      ['Present', 'Completed', 'Late'].includes(r.status)
-  )
-
+  const todayRecords = attendance.filter(
+  r =>
+    r.date === today &&
+    r.check_in
+)
   const presentToday = todayRecords.length
   const totalEmployees = users.length
   const absentToday = totalEmployees - presentToday
@@ -105,7 +128,7 @@ const todayStats = useMemo(() => {
     presentToday,
     absentToday,
   }
-}, [user])
+}, [user, attendance, users])
 
 const recent = attendance.slice(0, 5)
 
@@ -160,16 +183,24 @@ return (
     />
   </>
 )}
-          <StatCard label="Days Present" value={stats.present} color="success"
-            icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
-          <StatCard label="Days Absent" value={stats.absent} color="danger"
-            icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
-          <StatCard label="Leave Days" value={stats.leave} color="purple"
-            icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>} />
-          <StatCard label="Productive" value={formatDurationShort(stats.totalProductive)} color="accent"
-            icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>} />
-          <StatCard label="Break Used" value={formatDurationShort(stats.totalBreak)} color="warning"
-            icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
+          {!['Admin', 'Manager', 'HR'].includes(user?.role) && (
+  <>
+    <StatCard label="Days Present" value={stats.present} color="success"
+      icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
+
+    <StatCard label="Days Absent" value={stats.absent} color="danger"
+      icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
+
+    <StatCard label="Leave Days" value={stats.leave} color="purple"
+      icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>} />
+  </>
+)}
+
+<StatCard label="Productive" value={formatDurationShort(stats.totalProductive)} color="accent"
+  icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>} />
+
+<StatCard label="Break Used" value={formatDurationShort(stats.totalBreak)} color="warning"
+  icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
           
         </div>
       </motion.div>
@@ -196,12 +227,12 @@ return (
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-white/5">
+                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Employee Name</th>
                     <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
-                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Sign In</th>
-                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Sign Out</th>
-                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Productive</th>
-                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Overtime</th>
-                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Check In</th>
+                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Check Out</th>
+                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Productive Hours</th>
+                    <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Shift Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -213,14 +244,28 @@ return (
                       transition={{ delay: i * 0.06 }}
                       className="table-row"
                     >
+                      <td className="px-5 py-3.5 text-sm text-white font-medium">
+  {r.user_name}
+</td>
                       <td className="px-5 py-3.5 text-sm text-white font-medium">{formatDate(r.date)}</td>
                       <td className="px-5 py-3.5 text-sm text-slate-400 font-mono">
-                        {r.signIn ? new Date(r.signIn).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '--'}
-                      </td>
-                      <td className="px-5 py-3.5 text-sm text-slate-400 font-mono">
-                        {r.signOut ? new Date(r.signOut).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '--'}
-                      </td>
-                      <td className="px-5 py-3.5 text-sm text-accent-light font-mono">{formatDurationShort(r.productiveSeconds)}</td>
+  {r.check_in
+    ? new Date(r.check_in).toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    : '--'}
+</td>
+
+<td className="px-5 py-3.5 text-sm text-slate-400 font-mono">
+  {r.check_out
+    ? new Date(r.check_out).toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    : '--'}
+</td>
+                      <td className="px-5 py-3.5 text-sm text-accent-light font-mono">{formatDurationShort(r.productive_seconds)}</td>
                      
                       <td className="px-5 py-3.5"><StatusBadge status={r.status} /></td>
                     </motion.tr>
