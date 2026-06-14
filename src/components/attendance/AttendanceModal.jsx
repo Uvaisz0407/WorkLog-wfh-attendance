@@ -56,8 +56,7 @@ export default function AttendanceModal({ open, onClose, onSave, record, userId,
       const breakSec = Math.max(0, (parseInt(form.breakMinutes) || 0) * 60)
       const productiveSec = Math.max(0, shiftSec - breakSec)
       const shiftConfig = { requiredHours: 8 }
-      const overtimeSec = getOvertimeSeconds(productiveSec, shiftConfig)
-      return { shiftSec, breakSec, productiveSec, overtimeSec }
+      return { shiftSec, breakSec, productiveSec}
     } catch { return null }
   }
 
@@ -89,7 +88,7 @@ export default function AttendanceModal({ open, onClose, onSave, record, userId,
       ? Math.max(0, (new Date(signOutISO) - new Date(signInISO)) / 1000) : 0
     const productiveSec = Math.max(0, shiftSec - breakSec)
     const shiftConfig = { requiredHours: 8 }
-    const overtimeSec = getOvertimeSeconds(productiveSec, shiftConfig)
+    
 
   onSave({
   user_id: userId,
@@ -197,8 +196,7 @@ export default function AttendanceModal({ open, onClose, onSave, record, userId,
                     <div className="text-sm font-semibold text-accent-light">{formatDurationShort(preview.productiveSec)}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-slate-500 mb-0.5">Overtime</div>
-                    <div className="text-sm font-semibold text-purple">{formatDurationShort(preview.overtimeSec)}</div>
+                    
                   </div>
                 </div>
               )}
