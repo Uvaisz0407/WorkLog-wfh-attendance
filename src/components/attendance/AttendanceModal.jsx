@@ -87,7 +87,7 @@ export default function AttendanceModal({ open, onClose, onSave, record, userId,
     const shiftSec = (signInISO && signOutISO)
       ? Math.max(0, (new Date(signOutISO) - new Date(signInISO)) / 1000) : 0
     const productiveSec = Math.max(0, shiftSec - breakSec)
-    const shiftConfig = { requiredHours: 8 }
+    const shiftConfig = { requiredHours: 9 }
     
 
   onSave({
