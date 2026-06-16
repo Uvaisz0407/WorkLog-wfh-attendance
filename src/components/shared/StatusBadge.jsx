@@ -6,6 +6,7 @@ const statusMap = {
   'Half Day':{ bg: 'bg-warning/10',  text: 'text-warning',   dot: 'bg-warning'  },
   Leave:     { bg: 'bg-purple/10',   text: 'text-purple',    dot: 'bg-purple'   },
   Late:      { bg: 'bg-orange-500/10', text: 'text-orange-400', dot: 'bg-orange-400' },
+  Holiday: { bg: 'bg-purple-500/10', text: 'text-purple-400'},
   Completed: { bg: 'bg-accent/10',   text: 'text-accent-light', dot: 'bg-accent' },
   'On Break':{ bg: 'bg-warning/10',  text: 'text-warning',   dot: 'bg-warning'  },
 }

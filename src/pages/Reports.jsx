@@ -71,7 +71,7 @@ const employees = useMemo(() => {
   if (employeeFilter !== 'all')
     data = data.filter(r => r.user_name === employeeFilter)
 
-  return data.sort((a, b) => b.date.localeCompare(a.date))
+  return data.sort((a, b) => a.date.localeCompare(b.date))
 }, [rawRecords, monthFilter, statusFilter, employeeFilter])
  
 

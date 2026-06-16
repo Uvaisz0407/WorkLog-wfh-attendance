@@ -82,15 +82,15 @@ export function useLiveSession() {
       return s
     }, 0) + (session?.onBreak ? breakElapsed : 0)
 
-  const productiveSeconds = Math.max(
-    0,
-    elapsed - totalBreakSeconds
-  )
+ const productiveSeconds = Math.max(
+  0,
+  elapsed - totalBreakSeconds
+)
 
   const shiftConfig =
     user?.shiftConfig || {
       totalHours: 9,
-      requiredHours: 9,
+      requiredHours: 8,
       breakAllowed: 1
     }
 
@@ -191,11 +191,10 @@ export function useLiveSession() {
       session.signInTime,
       now
     )
-
-    const productiveSec = Math.max(
-      0,
-      shiftSec - totalBreak
-    )
+const productiveSec = Math.max(
+  0,
+  shiftSec - totalBreak
+)
 
     const status = getStatus(
       productiveSec,
