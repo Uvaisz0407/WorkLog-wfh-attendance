@@ -26,7 +26,7 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    console.log("LOGIN BUTTON CLICKED")
+   
 
   if (!form.email.trim() || !form.password) {
     toast.error('Please fill in all fields')

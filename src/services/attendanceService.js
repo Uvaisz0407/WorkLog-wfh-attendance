@@ -37,6 +37,18 @@ export async function getAttendanceByDate(userId, date) {
 }
 
 export async function createAttendance(record) {
+
+  const existing = await getAttendanceByDate(
+    record.user_id,
+    record.date
+  )
+
+  if (existing) {
+    throw new Error(
+      'Attendance for this date already exists. Use Edit instead.'
+    )
+  }
+
   const { data, error } = await supabase
     .from('attendance_records')
     .insert([record])

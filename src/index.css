@@ -111,9 +111,9 @@
     @apply glass-card rounded-2xl p-5;
   }
 
-  .table-row {
-    @apply border-b border-white hover:bg-white transition-colors duration-150;
-  }
+ .table-row {
+  @apply border-b border-white/5 hover:bg-dark-500 transition-colors duration-150;
+}
 }
 
 @layer utilities {

@@ -4,7 +4,7 @@ import autoTable from 'jspdf-autotable'
 import { formatDate, formatDurationShort, formatTime } from './time'
 
 export const exportCSV = (records, filename = 'attendance') => {
-  console.log("CSV RECORD:", records[0])
+  
   const rows = records.map(r => ({
     'Date': formatDate(r.date),
     'Employee': r.user_name || '--',

@@ -15,7 +15,7 @@ import AttendanceModal from '../components/attendance/AttendanceModal'
 import ConfirmModal from '../components/shared/ConfirmModal'
 import toast from 'react-hot-toast'
 
-const STATUSES = ['All', 'Present', 'Absent', 'Half Day', 'Leave', 'Late', 'Completed']
+const STATUSES = ['All', 'Present', 'Absent', 'Half Day', 'Leave', 'Late', 'Completed', 'Holiday']
 
 export default function Attendance() {
   const { user } = useAuth()
